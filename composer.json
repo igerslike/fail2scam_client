@@ -1,5 +1,20 @@
 {
-   "require": {
-      "guzzlehttp/guzzle": "~6.0"
-   }
+    "name": "f2s/client",
+    "description": "This is the API client example for Fail2Scam.com",
+    "authors": [
+        {
+            "name": "MrNsane",
+            "email": "insaneburn@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.5",
+        "guzzlehttp/guzzle": "~6.0"
+    },
+    "autoload": {
+        "files": [
+            "client.php",
+            "record.php"
+        ]
+    }
 }

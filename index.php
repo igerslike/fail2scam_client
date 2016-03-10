@@ -5,107 +5,71 @@
  */
 include 'vendor/autoload.php';
 
-use GuzzleHttp\Client;
+use F2S\Client;
+use F2S\Record;
 
-class F2SClient
+function res($record)
 {
-
-    private $client;
-    private $config = [];
-
-    private $responses = [];
-
-    public function __construct($config)
-    {
-        $this->config = $config;
-        $this->client = new Client([
-            'base_uri' => $config['host']
-        ]);
-    }
-
-    public function verify($data = [])
-    {
-        return $this->batch([$data]);
-    }
-
-    public function batch($items = [])
-    {
-        $this->responses = [];
-        try {
-            $response = $this->client->request('GET', '/api/check', [
-                'query' => array_map([$this, 'cleanData'], $items) + ['key' => $this->config['key']]
-            ]);
-
-            $result = true;
-            $content = json_decode($response->getBody()->getContents(), true);
-            foreach ($content as $k => $v) {
-                if (!$v['valid']) {
-                    $result = false;
-                }
-                $this->responses[$k] = $v;
-            }
-            return $result;
-        } catch (\GuzzleHttp\Exception\ConnectException $e) {
-            $this->d() && print($e->getMessage());
-        } catch (\GuzzleHttp\Exception\ClientException $e) {
-            $this->d() && print($e->getMessage());
-        }
-
-        return false;
-    }
-
-    /**
-     * Make sure only valid parameters are sent
-     *
-     * @param array $data
-     * @return array
-     */
-    public function cleanData($data)
-    {
-        return array_intersect_key(array_flip(['firstname', 'lastname', 'email', 'phone', 'address1', 'address2']), $data);
-    }
-
-    /**
-     * Check if debug mode is enabled
-     *
-     * @return bool
-     */
-    private function d()
-    {
-        return isset($this->config['debug']) && $this->config['debug'];
-    }
+    print sprintf(
+        "%sDATA = %s: isValid? %s%s",
+        "\n" . str_repeat('=', 50) . "\n",
+        print_r($record->getData(), true),
+        ($record->isValid() ? "YES" : "NO - " . $record->dumpMessages()),
+        "\n" . str_repeat('=', 50) . "\n"
+    );
 }
 
-// --
+// -- EXAMPLE
 
-$client = new F2SClient([
-    'host' => 'http://localhost:8000',
-    'key' => 'YOUR_KEY',
-    'debug' => true
+$client = new Client([
+    'key' => '$2y$10$HwJL5UDaWaeSUsWf02yJJewFsLJUMS7VyJF4U/Di336Mt7b4SGnV.',
+    'verbose' => true
 ]);
 
-$isValid = $client->verify([
-    'firstname' => 'John',
-    'lastname' => 'Doe',
-    'email' => 'localhost@localhost'
-]);
+// Example 1
+// In this example we'll try to validate an email address using the RISKY acceptance level
 
-print("Check test #1\n");
-var_dump($isValid);
+$record = new Record();
+$record->filterByEmail('john.doe@mailinator.com');
+try {
+    $record = $client->single($record, Client::LEVEL_RISKY);
+    res($record);
+} catch (\Exception $e) {
+    print $e->getMessage() . "\n";
+}
+
+// which results in false, as this email is already on our system
 
 
-$isValid = $client->batch([
-    [
-        'firstname' => 'John',
-        'lastname' => 'Doe',
-        'email' => 'localhost@localhost'
-    ],
-    [
-        'firstname' => 'Jane',
-        'lastname' => 'Doe',
-        'email' => 'locallyhost@localhost'
-    ],
-]);
+// Example 2
+// In this example we'll try to validate an email address using the STRICT acceptance level
 
-print("Check test #2\n");
-var_dump($isValid);
+try {
+    $record = $client->single($record, Client::LEVEL_STRICT);
+    res($record);
+} catch (\Exception $e) {
+    print $e->getMessage() . "\n";
+}
+
+// which results in true, because this email didn't have any major incident and it was validated by our staff
+// being a low level incident or wrongly reported
+
+
+
+// Example 3
+// Validate a batch of records
+// NOTE: this will count as 3 API Key usages!
+$records = [];
+// this record will be validated against an email AND a phone number
+$records[] = (new Record())->filterByEmail('john.doe@email.com')->filterByPhoneNumber('111111111');
+$records[] = (new Record())->filterByIpAddress('0.0.0.0');
+$records[] = (new Record())->filterByCreditCardNumber('0000000000000000');
+
+try {
+    $records = $client->batch($records, Client::LEVEL_STRICT);
+    foreach ($records as $record) {
+        res($record);
+    }
+} catch (\Exception $e) {
+    print $e->getMessage() . "\n";
+}
