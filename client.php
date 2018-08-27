@@ -94,10 +94,12 @@ class Client
      * Report a record
      *
      * @param Record $record
+     * @param null|string $reason
      * @return bool
      */
-    public function report(Record $record)
+    public function report(Record $record, $reason = null)
     {
+        null !== $reason && $record->setReason($reason);
         $query = array_merge([
             'key' => $this->config['key']
         ], $record->getData());

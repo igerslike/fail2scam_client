@@ -62,6 +62,18 @@ class Record
     }
 
     /**
+     * Set report reason
+     *
+     * @param $reason
+     * @return $this
+     */
+    public function setReason($reason)
+    {
+        $this->data['report'] = $reason;
+        return $this;
+    }
+
+    /**
      * Get data from Record
      *
      * @return array
@@ -73,7 +85,7 @@ class Record
             throw new \Exception("At least one field should be specified for search!");
         }
 
-        return array_intersect_key($this->data, array_flip(['email', 'phone', 'ip', 'cc_number']));
+        return array_intersect_key($this->data, array_flip(['email', 'phone', 'ip', 'cc_number', 'report']));
     }
 
     /**
