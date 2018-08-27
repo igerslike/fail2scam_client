@@ -106,6 +106,6 @@ class Client
         $response = $this->client->request('POST', '/api/report', [
             'form_params' => $query
         ]);
-        return $response->getBody()->getContents() === "OK";
+        return $response->getStatusCode() === 201;
     }
 }
